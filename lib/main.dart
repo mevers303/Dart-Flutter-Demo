@@ -134,6 +134,9 @@ void multiplyMatrices() {
     for (int j = 0; j < 3; j++) {
       int sum = 0;
       for (int k = 0; k < 3; k++) {
+        if (matrix1.controllers[i][k].text.isEmpty || matrix2.controllers[k][j].text.isEmpty) {
+          return;
+        }
         int a = int.parse(matrix1.controllers[i][k].text);
         int b = int.parse(matrix2.controllers[k][j].text);
         sum += a * b;
