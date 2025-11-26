@@ -1,7 +1,146 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(const MyApp());
+}
+
+// matrix widget
+class MatrixWidget extends StatelessWidget {
+  final List<List<TextEditingController>> controllers;
+  final List<List<FocusNode>> focusNodes;
+
+  MatrixWidget({required this.controllers, super.key})
+    : focusNodes = controllers
+          .map((row) => row.map((_) => FocusNode()).toList())
+          .toList() {
+    // add listeners for lose focus to each focus node
+    for (int i = 0; i < focusNodes.length; i++) {
+      for (int j = 0; j < focusNodes[i].length; j++) {
+        focusNodes[i][j].addListener(() {
+          if (!focusNodes[i][j].hasFocus) {
+            // on lose focus, make sure it's not empty
+            if (controllers[i][j].text.isEmpty) {
+              controllers[i][j].text = '0';
+            }
+          }
+        });
+      }
+    }
+
+    // add listeners to each controller to multiply matrices on change
+    for (int i = 0; i < controllers.length; i++) {
+      for (int j = 0; j < controllers[i].length; j++) {
+        controllers[i][j].addListener(() {
+          if (controllers[i][j].text.isNotEmpty) {
+            multiplyMatrices();
+          }
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: controllers.map((rowControllers) {
+        return Row(
+          children: rowControllers.map((controller) {
+            return SizedBox(
+              width: 50,
+              child: TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                focusNode:
+                    focusNodes[controllers.indexOf(
+                      rowControllers,
+                    )][rowControllers.indexOf(controller)],
+                textAlign: .center,
+              ),
+            );
+          }).toList(),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// two instances of MatrixWidget side by side
+MatrixWidget matrix1 = MatrixWidget(
+  controllers: [
+    [
+      TextEditingController(text: '1'),
+      TextEditingController(text: '2'),
+      TextEditingController(text: '3'),
+    ],
+    [
+      TextEditingController(text: '4'),
+      TextEditingController(text: '5'),
+      TextEditingController(text: '6'),
+    ],
+    [
+      TextEditingController(text: '7'),
+      TextEditingController(text: '8'),
+      TextEditingController(text: '9'),
+    ],
+  ],
+);
+
+var matrix2 = MatrixWidget(
+  controllers: [
+    [
+      TextEditingController(text: '9'),
+      TextEditingController(text: '8'),
+      TextEditingController(text: '7'),
+    ],
+    [
+      TextEditingController(text: '6'),
+      TextEditingController(text: '5'),
+      TextEditingController(text: '4'),
+    ],
+    [
+      TextEditingController(text: '3'),
+      TextEditingController(text: '2'),
+      TextEditingController(text: '1'),
+    ],
+  ],
+);
+
+// the result matrix widget
+var resultMatrix = MatrixWidget(
+  controllers: [
+    [
+      TextEditingController(text: '30'),
+      TextEditingController(text: '24'),
+      TextEditingController(text: '18'),
+    ],
+    [
+      TextEditingController(text: '84'),
+      TextEditingController(text: '69'),
+      TextEditingController(text: '54'),
+    ],
+    [
+      TextEditingController(text: '138'),
+      TextEditingController(text: '114'),
+      TextEditingController(text: '90'),
+    ],
+  ],
+);
+
+void multiplyMatrices() {
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      int sum = 0;
+      for (int k = 0; k < 3; k++) {
+        int a = int.parse(matrix1.controllers[i][k].text);
+        int b = int.parse(matrix2.controllers[k][j].text);
+        sum += a * b;
+      }
+      resultMatrix.controllers[i][j].text = sum.toString();
+    }
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -11,7 +150,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Dart + Flutter Demo',
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -30,7 +169,7 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: .fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Dart + Flutter Demo: Matrix Multiplication'),
     );
   }
 }
@@ -54,19 +193,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -84,6 +210,7 @@ class _MyHomePageState extends State<MyHomePage> {
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
+        centerTitle: true,
       ),
       body: Center(
         // Center is a layout widget. It takes a single child and positions it
@@ -104,18 +231,28 @@ class _MyHomePageState extends State<MyHomePage> {
           // wireframe for each widget.
           mainAxisAlignment: .center,
           children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+            // row containing two matrices to be multiplied
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // First matrix
+                matrix1,
+                const SizedBox(width: 20),
+                const Text('x'),
+                const SizedBox(width: 20),
+                // Second matrix
+                matrix2,
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Text('Result:'),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [resultMatrix],
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
       ),
     );
   }
